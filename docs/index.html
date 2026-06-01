@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seed Zones Interactive</title>
+  <link href="https://unpkg.com/maplibre-gl@4/dist/maplibre-gl.css" rel="stylesheet">
+  <script src="https://unpkg.com/maplibre-gl@4/dist/maplibre-gl.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 13px;
+      color: #222;
+    }
+
+    /* ── Sidebar ─────────────────────────────── */
+    #sidebar {
+      width: 240px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+      border-right: 1px solid #ddd;
+      z-index: 1;
+    }
+
+    #sidebar-header {
+      padding: 12px 12px 10px;
+      border-bottom: 1px solid #eee;
+    }
+
+    #sidebar-header h1 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .layer-item {
+      display: flex;
+      align-items: center;
+      padding: 5px 12px;
+      gap: 8px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .layer-item:hover { background: #f5f7fa; }
+
+    .layer-item input[type="checkbox"] {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+      cursor: pointer;
+      accent-color: #4a90d9;
+    }
+
+    /* ── Zone legend ─────────────────────────── */
+    #zone-legend {
+      padding: 10px 12px;
+      border-top: 1px solid #eee;
+      border-bottom: 1px solid #eee;
+    }
+
+    #zone-legend h2 {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #666;
+      margin-bottom: 6px;
+    }
+
+    .legend-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 3px;
+    }
+
+    .legend-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .legend-swatch {
+      width: 18px;
+      height: 18px;
+      border-radius: 3px;
+      border: 1px solid rgba(0,0,0,0.15);
+    }
+
+    .legend-label {
+      font-size: 10px;
+      color: #555;
+    }
+
+    .layer-label {
+      font-style: italic;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    .layer-item.loading .layer-label { color: #999; }
+
+    /* ── Group headers ───────────────────────── */
+    .group-header {
+      padding: 6px 12px 4px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #888;
+      background: #f8f8f8;
+      border-top: 1px solid #eee;
+      border-bottom: 1px solid #eee;
+    }
+
+    #ref-list { border-bottom: 1px solid #eee; }
+
+    .ref-swatch {
+      width: 24px;
+      height: 4px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    /* search sits inside the species group header */
+    #search-wrap {
+      padding: 6px 12px 8px;
+      border-bottom: 1px solid #eee;
+    }
+
+    #search {
+      width: 100%;
+      padding: 5px 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 12px;
+      outline: none;
+    }
+
+    #search:focus { border-color: #4a90d9; }
+
+    #layer-list {
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    #sidebar-footer {
+      padding: 8px 12px;
+      font-size: 11px;
+      color: #888;
+      border-top: 1px solid #eee;
+    }
+
+    /* ── Basemap selector ────────────────────── */
+    #basemap-section {
+      padding: 8px 12px;
+      border-top: 1px solid #eee;
+    }
+
+    #basemap-section h2 {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #888;
+      margin-bottom: 6px;
+    }
+
+    #basemap-select {
+      width: 100%;
+      padding: 4px 6px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 12px;
+      background: #fff;
+      cursor: pointer;
+      outline: none;
+    }
+
+    #basemap-select:focus { border-color: #4a90d9; }
+
+    /* ── Map ─────────────────────────────────── */
+    #map { flex: 1; }
+    #content { display: flex; flex: 1; min-height: 0; }
+    nav.site-nav {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 8px 16px;
+      background: #fff;
+      border-bottom: 1px solid #ddd;
+      flex-shrink: 0;
+      font-size: 13px;
+    }
+    nav.site-nav .site-title {
+      font-weight: 600;
+      color: #222;
+      margin-right: auto;
+      text-decoration: none;
+    }
+    nav.site-nav .site-title:hover { text-decoration: underline; }
+    nav.site-nav a {
+      text-decoration: none;
+      color: #4a90d9;
+      font-weight: 500;
+    }
+    nav.site-nav a:hover { text-decoration: underline; }
+    nav.site-nav .nav-disabled {
+      color: #999;
+      cursor: default;
+      pointer-events: none;
+    }
+
+    /* ── Popup ───────────────────────────────── */
+    .maplibregl-popup-content {
+      font-size: 12px;
+      padding: 8px 12px;
+      min-width: 120px;
+    }
+
+    .popup-species { font-style: italic; font-weight: 600; margin-bottom: 4px; }
+    .popup-zone { color: #555; }
+  </style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="site-title" href="https://sagesteppe.github.io/safeHavens/">Safe Havens</a>
+  <a href="./index.html">Interactive Map</a>
+  <a href="./coefficients/coef_sign_explorer.html">Coefficient Explorer</a>
+  <a href="#" class="nav-disabled">Manuscript (coming soon)</a>
+</nav>
+
+<div id="content">
+<div id="sidebar">
+  <div id="sidebar-header">
+    <h1>Seed Zones</h1>
+  </div>
+  <div id="zone-legend">
+    <h2>Zone ID</h2>
+    <div class="legend-grid" id="legend-grid"></div>
+  </div>
+
+  <div class="group-header">Reference</div>
+  <div id="ref-list"></div>
+
+  <div class="group-header">Species</div>
+  <div id="search-wrap">
+    <input id="search" type="text" placeholder="Filter species…" autocomplete="off">
+  </div>
+  <div id="layer-list"></div>
+
+  <div id="basemap-section">
+    <h2>Basemap</h2>
+    <select id="basemap-select">
+      <option value="liberty">Liberty</option>
+      <option value="bright">Bright</option>
+      <option value="positron">Positron</option>
+    </select>
+  </div>
+  <div id="sidebar-footer">0 layers active</div>
+</div>
+
+<div id="map"></div>
+</div><!-- #content -->
+
+<script>
+  // 12-color qualitative palette for zone IDs (ColorBrewer Set3)
+  const ZONE_COLORS = [
+    '#8dd3c7','#ffffb3','#bebada','#fb8072','#80b1d3','#fdb462',
+    '#b3de69','#fccde5','#d9d9d9','#bc80bd','#ccebc5','#ffed6f'
+  ];
+
+  // MapLibre match expression: colors polygon by integer ID 1–12
+  const ID_COLOR_EXPR = [
+    'match', ['get', 'ID'],
+    1,  ZONE_COLORS[0],
+    2,  ZONE_COLORS[1],
+    3,  ZONE_COLORS[2],
+    4,  ZONE_COLORS[3],
+    5,  ZONE_COLORS[4],
+    6,  ZONE_COLORS[5],
+    7,  ZONE_COLORS[6],
+    8,  ZONE_COLORS[7],
+    9,  ZONE_COLORS[8],
+    10, ZONE_COLORS[9],
+    11, ZONE_COLORS[10],
+    12, ZONE_COLORS[11],
+    '#cccccc'  // fallback for any ID outside 1–12
+  ];
+
+  // ── Map init ──────────────────────────────────────────────────
+  const map = new maplibregl.Map({
+    container: 'map',
+    style: 'https://tiles.openfreemap.org/styles/liberty',
+    center: [-100, 45],
+    zoom: 3
+  });
+
+  map.addControl(new maplibregl.NavigationControl(), 'top-right');
+  map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-right');
+
+  // ── State ─────────────────────────────────────────────────────
+  const loaded = new Set(); // species whose source+layers are on the map
+
+  // ── Zone legend ───────────────────────────────────────────────
+  function buildLegend() {
+    const grid = document.getElementById('legend-grid');
+    ZONE_COLORS.forEach((color, i) => {
+      const cell = document.createElement('div');
+      cell.className = 'legend-cell';
+
+      const sw = document.createElement('div');
+      sw.className = 'legend-swatch';
+      sw.style.background = color;
+
+      const lbl = document.createElement('span');
+      lbl.className = 'legend-label';
+      lbl.textContent = i + 1;
+
+      cell.appendChild(sw);
+      cell.appendChild(lbl);
+      grid.appendChild(cell);
+    });
+  }
+
+  // ── Sidebar build ─────────────────────────────────────────────
+  function buildSidebar(species) {
+    const list = document.getElementById('layer-list');
+
+    species.forEach(sp => {
+      const item = document.createElement('div');
+      item.className = 'layer-item';
+      item.dataset.sp = sp;
+
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.id = `cb-${sp}`;
+
+      const lbl = document.createElement('label');
+      lbl.className = 'layer-label';
+      lbl.htmlFor = `cb-${sp}`;
+      lbl.title = sp.replace(/_/g, ' ');
+      lbl.textContent = sp.replace(/_/g, ' ');
+
+      cb.addEventListener('change', () => toggle(sp, cb, item));
+
+      item.appendChild(cb);
+      item.appendChild(lbl);
+      list.appendChild(item);
+    });
+  }
+
+  // ── Toggle layer on/off ───────────────────────────────────────
+  async function toggle(sp, cb, item) {
+    if (cb.checked) {
+      item.classList.add('loading');
+      await addLayer(sp);
+      item.classList.remove('loading');
+    } else {
+      removeLayer(sp);
+    }
+    updateFooter();
+  }
+
+  async function addLayer(sp) {
+    if (loaded.has(sp)) return;
+    try {
+      const res = await fetch(`data/${sp}.geojson`);
+      if (!res.ok) throw new Error(res.statusText);
+      const geojson = await res.json();
+
+      map.addSource(sp, { type: 'geojson', data: geojson });
+
+      map.addLayer({
+        id: `${sp}-fill`,
+        type: 'fill',
+        source: sp,
+        paint: {
+          'fill-color': ID_COLOR_EXPR,
+          'fill-opacity': 0.45
+        }
+      });
+
+      map.addLayer({
+        id: `${sp}-outline`,
+        type: 'line',
+        source: sp,
+        paint: {
+          'line-color': ID_COLOR_EXPR,
+          'line-width': 1.2,
+          'line-opacity': 0.9
+        }
+      });
+
+      loaded.add(sp);
+      attachPopup(sp);
+    } catch (err) {
+      console.warn(`Failed to load ${sp}:`, err);
+      // uncheck if load failed
+      const cb = document.getElementById(`cb-${sp}`);
+      if (cb) cb.checked = false;
+    }
+  }
+
+  function removeLayer(id) {
+    if (!loaded.has(id)) return;
+    if (map.getLayer(`${id}-fill`)) map.removeLayer(`${id}-fill`);
+    if (map.getLayer(`${id}-outline`)) map.removeLayer(`${id}-outline`);
+    if (map.getSource(id)) map.removeSource(id);
+    loaded.delete(id);
+  }
+
+  // ── Click popup ───────────────────────────────────────────────
+  const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: true });
+
+  function attachPopup(sp) {
+    map.on('click', `${sp}-fill`, e => {
+      const feat = e.features[0];
+      const zoneId = feat.properties.ID ?? '—';
+      popup
+        .setLngLat(e.lngLat)
+        .setHTML(`
+          <div class="popup-species">${sp.replace(/_/g, ' ')}</div>
+          <div class="popup-zone">Zone ID: ${zoneId}</div>
+        `)
+        .addTo(map);
+    });
+
+    map.on('mouseenter', `${sp}-fill`, () => {
+      map.getCanvas().style.cursor = 'pointer';
+    });
+    map.on('mouseleave', `${sp}-fill`, () => {
+      map.getCanvas().style.cursor = '';
+    });
+  }
+
+  // ── Footer count ──────────────────────────────────────────────
+  function updateFooter() {
+    const n = loaded.size;
+    document.getElementById('sidebar-footer').textContent =
+      `${n} layer${n !== 1 ? 's' : ''} active`;
+  }
+
+  // ── Reference layers ──────────────────────────────────────────
+  // Add entries as: { id: 'unique_key', label: 'Display Name', file: 'data/filename.geojson', color: '#hex' }
+  const REFERENCES = [
+    { id: 'CookCounty',        label: 'Cook County',         file: 'data/CookCounty.geojson',        color: '#555555', popup: { title: 'Cook County',        field: 'SeedZone',   fieldLabel: 'Seed Zone' } },
+    { id: 'PSTZs',             label: 'PSTZs',               file: 'data/PSTZs.geojson',             color: '#b45309', popup: { title: 'PSTZ',               field: 'New_label',  fieldLabel: 'Zone'      } },
+    { id: 'EasternSeedZones',  label: 'Eastern Seed Zones',  file: 'data/EasternSeedZones.geojson',  color: '#065f46', popup: { title: 'Eastern Seed Zones',  field: 'SeedZone',   fieldLabel: 'Seed Zone' } },
+  ];
+
+  // Colors cycling through a neutral set for reference layers
+  const REF_COLORS = ['#555555','#b45309','#065f46'];
+
+  function buildRefSidebar(refs) {
+    const list = document.getElementById('ref-list');
+    if (refs.length === 0) {
+      list.style.display = 'none';
+      return;
+    }
+    refs.forEach((ref, i) => {
+      const color = ref.color ?? REF_COLORS[i % REF_COLORS.length];
+
+      const item = document.createElement('div');
+      item.className = 'layer-item';
+
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.id = `cb-ref-${ref.id}`;
+
+      const swatch = document.createElement('div');
+      swatch.className = 'ref-swatch';
+      swatch.style.background = color;
+
+      const lbl = document.createElement('label');
+      lbl.className = 'layer-label';
+      lbl.htmlFor = `cb-ref-${ref.id}`;
+      lbl.textContent = ref.label;
+
+      cb.addEventListener('change', () => toggleRef(ref, color, cb, item));
+
+      item.appendChild(cb);
+      item.appendChild(swatch);
+      item.appendChild(lbl);
+      list.appendChild(item);
+    });
+  }
+
+  async function toggleRef(ref, color, cb, item) {
+    if (cb.checked) {
+      item.classList.add('loading');
+      await addRefLayer(ref, color);
+      item.classList.remove('loading');
+    } else {
+      removeLayer(ref.id);
+    }
+    updateFooter();
+  }
+
+  async function addRefLayer(ref, color) {
+    if (loaded.has(ref.id)) return;
+    try {
+      const res = await fetch(ref.file);
+      if (!res.ok) throw new Error(res.statusText);
+      const geojson = await res.json();
+
+      map.addSource(ref.id, { type: 'geojson', data: geojson });
+      map.addLayer({
+        id: `${ref.id}-outline`,
+        type: 'line',
+        source: ref.id,
+        paint: { 'line-color': color, 'line-width': 1.5, 'line-dasharray': [3, 2] }
+      });
+
+      if (ref.popup) {
+        map.addLayer({
+          id: `${ref.id}-fill`,
+          type: 'fill',
+          source: ref.id,
+          paint: { 'fill-color': color, 'fill-opacity': 0 }
+        });
+
+        map.on('click', `${ref.id}-fill`, e => {
+          const val = e.features[0].properties[ref.popup.field] ?? '—';
+          popup
+            .setLngLat(e.lngLat)
+            .setHTML(`
+              <div class="popup-species">${ref.popup.title}</div>
+              <div class="popup-zone">${ref.popup.fieldLabel}: ${val}</div>
+            `)
+            .addTo(map);
+        });
+
+        map.on('mouseenter', `${ref.id}-fill`, () => { map.getCanvas().style.cursor = 'pointer'; });
+        map.on('mouseleave', `${ref.id}-fill`, () => { map.getCanvas().style.cursor = ''; });
+      }
+
+      loaded.add(ref.id);
+    } catch (err) {
+      console.warn(`Failed to load reference layer ${ref.id}:`, err);
+      const el = document.getElementById(`cb-ref-${ref.id}`);
+      if (el) el.checked = false;
+    }
+  }
+
+  // ── Basemap switcher ──────────────────────────────────────────
+  document.getElementById('basemap-select').addEventListener('change', e => {
+    const style = e.target.value;
+    // Remember which sources/layers are currently loaded
+    const activeLayers = [...loaded];
+    activeLayers.forEach(id => removeLayer(id));
+    loaded.clear();
+
+    map.setStyle(`https://tiles.openfreemap.org/styles/${style}`);
+
+    map.once('styledata', () => {
+      // Re-add any layers that were visible before the style swap
+      activeLayers.forEach(id => {
+        const cb = document.getElementById(`cb-${id}`) ?? document.getElementById(`cb-ref-${id}`);
+        if (cb) cb.checked = false; // reset so toggle re-fetches
+      });
+    });
+  });
+
+  // ── Search filter (species only) ──────────────────────────────
+  document.getElementById('search').addEventListener('input', e => {
+    const q = e.target.value.toLowerCase();
+    document.querySelectorAll('#layer-list .layer-item').forEach(el => {
+      const name = el.dataset.sp.toLowerCase().replace(/_/g, ' ');
+      el.style.display = name.includes(q) ? '' : 'none';
+    });
+  });
+
+  // ── Layer list (inlined to avoid file:// fetch restrictions) ──
+  const SPECIES = ["Carex_tuckermanii","Hypoxis_hirsuta","Lithospermum_canescens","Ruellia_humilis","Asclepias_exaltata","Asclepias_purpurascens","Astragalus_crassicarpus","Blephilia_ciliata","Blephilia_hirsuta","Brachyelytrum_erectum","Bromus_kalmii","Bromus_nottowayanus","Carex_cristatella","Carex_davisii","Carex_festucacea","Carex_gracillima","Carex_hirtifolia","Carex_lupuliformis","Carex_meadii","Carex_pensylvanica","Carex_projecta","Carex_sartwellii","Carex_siccata","Carex_stricta","Carex_vesicaria","Carex_woodii","Castilleja_coccinea","Castilleja_sessiliflora","Cinna_arundinacea","Cirsium_altissimum","Dichanthelium_leibergii","Elymus_hystrix","Gentiana_andrewsii","Heuchera_richardsonii","Krigia_biflora","Lilium_philadelphicum","Lithospermum_latifolium","Luzula_multiflora","Micranthes_pensylvanica","Nabalus_racemosus","Pediomelum_esculentum","Pulsatilla_patens","Sisyrinchium_campestre","Sporobolus_michauxianus","Stachys_hispida","Viola_pedatifida"];
+
+  // ── Boot ──────────────────────────────────────────────────────
+  map.on('load', () => {
+    buildLegend();
+    buildRefSidebar(REFERENCES);
+    buildSidebar(SPECIES);
+  });
+</script>
+</body>
+</html>
