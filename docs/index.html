@@ -303,8 +303,8 @@
   const map = new maplibregl.Map({
     container: 'map',
     style: 'https://tiles.openfreemap.org/styles/liberty',
-    center: [-100, 45],
-    zoom: 3
+    center: [-87.6, 41.9],
+    zoom: 4
   });
 
   map.addControl(new maplibregl.NavigationControl(), 'top-right');
@@ -583,7 +583,7 @@
   });
 
   // ── Layer list (inlined to avoid file:// fetch restrictions) ──
-  const SPECIES = ["Carex_tuckermanii","Hypoxis_hirsuta","Lithospermum_canescens","Ruellia_humilis","Asclepias_exaltata","Asclepias_purpurascens","Astragalus_crassicarpus","Blephilia_ciliata","Blephilia_hirsuta","Brachyelytrum_erectum","Bromus_kalmii","Bromus_nottowayanus","Carex_cristatella","Carex_davisii","Carex_festucacea","Carex_gracillima","Carex_hirtifolia","Carex_lupuliformis","Carex_meadii","Carex_pensylvanica","Carex_projecta","Carex_sartwellii","Carex_siccata","Carex_stricta","Carex_vesicaria","Carex_woodii","Castilleja_coccinea","Castilleja_sessiliflora","Cinna_arundinacea","Cirsium_altissimum","Dichanthelium_leibergii","Elymus_hystrix","Gentiana_andrewsii","Heuchera_richardsonii","Krigia_biflora","Lilium_philadelphicum","Lithospermum_latifolium","Luzula_multiflora","Micranthes_pensylvanica","Nabalus_racemosus","Pediomelum_esculentum","Pulsatilla_patens","Sisyrinchium_campestre","Sporobolus_michauxianus","Stachys_hispida","Viola_pedatifida"];
+  const SPECIES = ["Asclepias_exaltata","Asclepias_purpurascens","Astragalus_crassicarpus","Blephilia_ciliata","Blephilia_hirsuta","Brachyelytrum_erectum","Bromus_kalmii","Bromus_nottowayanus","Carex_cristatella","Carex_davisii","Carex_festucacea","Carex_gracillima","Carex_hirtifolia","Carex_lupuliformis","Carex_meadii","Carex_pensylvanica","Carex_projecta","Carex_sartwellii","Carex_siccata","Carex_stricta","Carex_tuckermanii","Carex_vesicaria","Carex_woodii","Castilleja_coccinea","Castilleja_sessiliflora","Cinna_arundinacea","Cirsium_altissimum","Dichanthelium_leibergii","Elymus_hystrix","Gentiana_andrewsii","Heuchera_richardsonii","Hypoxis_hirsuta","Krigia_biflora","Lilium_philadelphicum","Lithospermum_canescens","Lithospermum_latifolium","Luzula_multiflora","Micranthes_pensylvanica","Nabalus_racemosus","Pediomelum_esculentum","Pulsatilla_patens","Ruellia_humilis","Sisyrinchium_campestre","Sporobolus_michauxianus","Stachys_hispida","Viola_pedatifida"];
 
   // ── Boot ──────────────────────────────────────────────────────
   map.on('load', () => {
