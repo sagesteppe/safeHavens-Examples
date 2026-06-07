@@ -19,6 +19,11 @@ fig <- plot_ly(
   hoverinfo = 'text',
   line = list(color = 'steelblue')
 ) |>
+  add_segments(
+    x = 0, xend = 1, y = 0, yend = 1,
+    line = list(dash = 'dash', color = 'rgba(150,150,150,0.6)'),
+    showlegend = FALSE, inherit = FALSE
+  ) |>
   layout(
     title = 'Leave-one-out ROC',
     paper_bgcolor = "rgba(0,0,0,0)",
@@ -40,11 +45,17 @@ fig <- plot_ly(
       list(
         type = "buttons",
         direction = "right",
-        x = 0.6, xanchor = "left",
-        y = 0.15, yanchor = "top",
+        x = 0.8, xanchor = "left",
+        y = 0.0, yanchor = "top",
         buttons = list(
-          list(method = "restyle", args = list("visible", TRUE),         label = "Show all"),
-          list(method = "restyle", args = list("visible", "legendonly"), label = "Hide all")
+          list(
+            method = "restyle",
+             args = list("visible", TRUE),         
+             label = "Show all"),
+          list(
+            method = "restyle", 
+            args = list("visible", "legendonly"), 
+            label = "Hide all")
         )
       )
     )
@@ -53,4 +64,8 @@ fig
 
 saveWidget(fig, 
   file.path('..', 'loo-roc', 'loo_curve.html'),
+  selfcontained = TRUE)
+
+saveWidget(fig, 
+  file.path('..', 'docs', 'loo-roc', 'loo_curve.html'),
   selfcontained = TRUE)

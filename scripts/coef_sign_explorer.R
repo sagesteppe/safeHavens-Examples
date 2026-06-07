@@ -329,3 +329,7 @@ p <- plot_ly() |>
 saveWidget(p, 
   file.path('..', 'coefficients', 'coef_sign_explorer.html'),
   selfcontained = TRUE)
+
+saveWidget(p, 
+  file.path('..', 'docs', 'coefficients', 'coef_sign_explorer.html'),
+  selfcontained = TRUE)
