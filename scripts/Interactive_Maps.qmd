@@ -23,7 +23,7 @@ esz = sf::st_make_valid(esz)
 
 st_write(
     esz, 
-    file.path('..', 'data', 'esz_v2_2.gpkg'), 
+    file.path('..', 'raw_data', 'esz_v2_2.gpkg'), 
     layer = "ESZ_v2_2",
     append=FALSE
     )
@@ -35,7 +35,7 @@ rm(url, lyr, esz)
 ```
 
 ```{r read-layers}
-p <- file.path('..', 'data', 'all_cluster_geometries.gpkg')
+p <- file.path('..', 'raw_data', 'all_cluster_geometries.gpkg')
 lyrs <- st_layers(p)[['name']]
 
 out_dir <- file.path('..', 'docs', 'data')
@@ -87,7 +87,7 @@ st_write(pstz, file.path(out_dir, 'PSTZs.geojson'))
 
 
 simplify geometries for more reactive display
-```{r}
+```{r, eval = F}
 esz = sf::st_read(file.path(out_dir, 'EasternSeedZones.geojson'))
 esz = rmapshaper::ms_simplify(esz)
 st_write(esz, file.path(out_dir, 'EasternSeedZones.geojson'), append=F)
