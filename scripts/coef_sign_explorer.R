@@ -3,7 +3,7 @@ library(plotly)
 library(htmlwidgets)
 
 coefs <- read_csv(
-  file.path('..', "data", "ManuscriptSummaries", "beta_coefficients.csv"),
+  file.path('..', "raw_data", "ManuscriptSummaries", "beta_coefficients.csv"),
   show_col_types = FALSE
 ) |>
   janitor::clean_names()
@@ -160,7 +160,10 @@ p <- plot_ly() |>
     xaxis     = list(title = "", tickangle = -45, categoryorder = "array",
                      categoryarray = sp_order),
     yaxis     = list(title = "", categoryorder = "array",
-                     categoryarray = rev(var_order)),library(tidyverse)
+                     categoryarray = rev(var_order))
+  )
+
+library(tidyverse)
 library(plotly)
 library(htmlwidgets)
 

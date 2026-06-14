@@ -64,7 +64,7 @@ fig <- fig |>
         type      = "buttons",
         direction = "right",
         x = 0.8, xanchor = "left",
-        y = 0.0, yanchor = "top",
+        y = 0.0, yanchor = "bottom",
         buttons = list(
           list(
             method = "restyle", 
