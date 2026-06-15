@@ -10,6 +10,9 @@ library(rmapshaper)
 library(jsonlite)
 library(arcgislayers)
 library(sf)
+
+out_dir <- file.path('..', 'docs', 'data')
+dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
 ```
 
 ```{r copy down the new eastern seed zones, eval = F}
@@ -33,15 +36,6 @@ ggplot() +
 
 rm(url, lyr, esz)
 ```
-
-```{r read-layers}
-p <- file.path('..', 'raw_data', 'all_cluster_geometries.gpkg')
-lyrs <- st_layers(p)[['name']]
-
-out_dir <- file.path('..', 'docs', 'data')
-dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
-```
-
 
 prep context layers
 ```{r prep context layers, eval = F}
@@ -99,7 +93,42 @@ pstz = sf::st_transform(pstz, 4326)
 st_write(pstz, file.path(out_dir, 'PSTZs.geojson'))
 ```
 
+```{r read-layers}
+p <- file.path('..', 'raw_data', 'all_cluster_geometries.gpkg')
+lyrs <- st_layers(p)[['name']]
+
+out_dir <- file.path('..', 'docs', 'data')
+dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
+```
+
+
 ```{r process-and-export}
+for (lyr in lyrs) {
+  geom <- st_read(p, layer = lyr, quiet = TRUE)
+  geom <- st_transform(geom, 4326)
+  geom <- ms_simplify(geom, keep = 0.05, keep_shapes = TRUE)
+  geom <- sf::st_make_valid(geom)
+  out_path <- file.path(out_dir, paste0(lyr, '.geojson'))
+  st_write(geom, out_path, delete_dsn = TRUE, quiet = TRUE)
+  message("exported: ", lyr)
+}
+
+# Layer manifest so the web app knows which files exist
+writeLines(
+    toJSON(lyrs, auto_unbox = FALSE), 
+    file.path(out_dir, 'layers.json')
+    )
+```
+
+
+## repeat for future geometries
+
+```{r}
+getwd()
+p <- file.path('..', 'raw_data', 'future_all_cluster_geometries.gpkg')
+lyrs <- st_layers(p)[['name']]
+out_dir <- file.path('..', 'docs', 'data_future')
+
 for (lyr in lyrs) {
   geom <- st_read(p, layer = lyr, quiet = TRUE)
   geom <- st_transform(geom, 4326)
