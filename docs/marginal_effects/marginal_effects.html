@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Marginal Effects | Safe Havens</title>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 13px;
+      color: #222;
+    }
+
+    nav.site-nav {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 8px 16px;
+      background: #fff;
+      border-bottom: 1px solid #ddd;
+      flex-shrink: 0;
+      font-size: 13px;
+    }
+    nav.site-nav .site-title {
+      font-weight: 600;
+      color: #222;
+      margin-right: auto;
+      text-decoration: none;
+    }
+    nav.site-nav .site-title:hover { text-decoration: underline; }
+    nav.site-nav a {
+      text-decoration: none;
+      color: #4a90d9;
+      font-weight: 500;
+    }
+    nav.site-nav a:hover { text-decoration: underline; }
+    nav.site-nav .nav-disabled {
+      color: #999;
+      cursor: default;
+      pointer-events: none;
+    }
+
+    #controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 16px;
+      border-bottom: 1px solid #eee;
+      flex-shrink: 0;
+    }
+
+    .toggle-group {
+      display: flex;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .toggle-btn {
+      padding: 5px 12px;
+      border: none;
+      background: #fff;
+      cursor: pointer;
+      font-size: 12px;
+      color: #555;
+    }
+    .toggle-btn:not(:last-child) { border-right: 1px solid #ddd; }
+    .toggle-btn.active { background: #4a90d9; color: #fff; }
+
+    #selector {
+      padding: 5px 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 12px;
+      min-width: 220px;
+    }
+
+    #status { color: #999; font-size: 11px; }
+
+    #chart { flex: 1; min-height: 0; }
+  </style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="site-title" href="https://sagesteppe.github.io/safeHavens/">Safe Havens</a>
+  <a href="../index.html">Interactive Map</a>
+  <a href="../future_clusters/compare.html">Current vs Forecast</a>
+  <a href="../coefficients/coef_sign_explorer.html">Coefficient Explorer</a>
+  <a href="../loo-roc/loo_curve.html">Receiver Operator Curve</a>
+  <a href="../accuracy/accuracy.html">Model Evaluation</a>
+  <a href="./marginal_effects.html" class="nav-disabled">Marginal Effects</a>
+  <a href="https://github.com/sagesteppe/GermplasmCurationTools/blob/main/safeHavens-and-eSTZwritR--R-packages-for-prioritizing-germplasm-collections-for-restoration-and-conservation.pdf">Manuscript (coming soon)</a>
+</nav>
+
+<div id="controls">
+  <div class="toggle-group">
+    <button class="toggle-btn active" id="btn-species" onclick="setMode('species')">By Species</button>
+    <button class="toggle-btn" id="btn-predictor" onclick="setMode('predictor')">By Predictor</button>
+  </div>
+  <select id="selector" onchange="render()"></select>
+  <span id="status">Loading data...</span>
+</div>
+
+<div id="chart"></div>
+
+<script>
+// Preserve the ordering from bio_groups in the R script
+const LABEL_ORDER = [
+  'Mean Annual Temp', 'Mean Diurnal Range', 'Isothermality', 'Temp Seasonality',
+  'Max Temp Warmest Mo.', 'Min Temp Coldest Mo.', 'Temp Annual Range',
+  'Mean Temp Wettest Qtr', 'Mean Temp Warmest Qtr', 'Mean Temp Coldest Qtr',
+  'Annual Precip', 'Precip Seasonality', 'Precip Wettest Qtr',
+  'Precip Driest Qtr', 'Precip Warmest Qtr'
+];
+
+const PURPLE = '#7261A3';
+const GREEN  = 'rgba(104,150,137,0.35)';
+
+let allData = [];
+let mode = 'species';
+let speciesList = [];
+let labelList = [];
+
+async function init() {
+  try {
+    allData = await fetch('./data.json').then(r => r.json());
+  } catch (e) {
+    document.getElementById('status').textContent = 'Error loading data.json';
+    return;
+  }
+
+  speciesList = [...new Set(allData.map(d => d.species))].sort();
+  labelList   = LABEL_ORDER.filter(l => allData.some(d => d.label === l));
+
+  document.getElementById('status').textContent = '';
+  populateSelector();
+  render();
+}
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('btn-species').classList.toggle('active', m === 'species');
+  document.getElementById('btn-predictor').classList.toggle('active', m === 'predictor');
+  populateSelector();
+  render();
+}
+
+function populateSelector() {
+  const items = mode === 'species' ? speciesList : labelList;
+  const sel = document.getElementById('selector');
+  sel.innerHTML = items.map(v => `<option value="${v}">${v}</option>`).join('');
+}
+
+function render() {
+  const val = document.getElementById('selector').value;
+  if (!val || !allData.length) return;
+  mode === 'species' ? renderBySpecies(val) : renderByPredictor(val);
+}
+
+function renderBySpecies(species) {
+  const filtered = allData.filter(d => d.species === species);
+  const labels   = LABEL_ORDER.filter(l => filtered.some(d => d.label === l));
+
+  const NCOLS = 4;
+  const nrows = Math.ceil(labels.length / NCOLS);
+  const traces = [];
+  const layout = {
+    grid: { rows: nrows, columns: NCOLS, pattern: 'independent' },
+    margin: { t: 20, b: 40, l: 50, r: 10 },
+    showlegend: false,
+    paper_bgcolor: '#fff',
+    plot_bgcolor: '#fff',
+  };
+
+  labels.forEach((label, i) => {
+    const suf  = i === 0 ? '' : `${i + 1}`;
+    const xref = `x${suf}`;
+    const yref = `y${suf}`;
+
+    const pts = filtered
+      .filter(d => d.label === label)
+      .sort((a, b) => a.x_value - b.x_value);
+    const x   = pts.map(d => d.x_value);
+    const lo  = pts.map(d => d.conf_low);
+    const hi  = pts.map(d => d.conf_high);
+    const est = pts.map(d => d.estimate);
+
+    // CI ribbon: fill from lo up to hi
+    traces.push({ x, y: lo, xaxis: xref, yaxis: yref, mode: 'lines', line: { color: 'transparent' }, hoverinfo: 'skip', showlegend: false });
+    traces.push({ x, y: hi, xaxis: xref, yaxis: yref, mode: 'lines', fill: 'tonexty', fillcolor: GREEN, line: { color: 'transparent' }, hoverinfo: 'skip', showlegend: false });
+    // Estimate line
+    traces.push({ x, y: est, xaxis: xref, yaxis: yref, mode: 'lines', line: { color: PURPLE, width: 2 }, name: label, hovertemplate: `<b>${label}</b><br>%{x:.2f} → %{y:.3f}<extra></extra>` });
+
+    layout[`xaxis${suf}`] = { title: { text: label, font: { size: 10 } }, gridcolor: '#eee', zeroline: false };
+    layout[`yaxis${suf}`] = { gridcolor: '#eee', zeroline: false, range: [0, 1.2], title: { text: i % NCOLS === 0 ? 'Estimate' : '', font: { size: 11 } } };
+  });
+
+  Plotly.react('chart', traces, layout, { responsive: true });
+}
+
+function renderByPredictor(label) {
+  const filtered = allData.filter(d => d.label === label);
+
+  const traces = speciesList
+    .filter(sp => filtered.some(d => d.species === sp))
+    .map(sp => {
+      const pts = filtered
+        .filter(d => d.species === sp)
+        .sort((a, b) => a.x_value - b.x_value);
+      return {
+        x: pts.map(d => d.x_value),
+        y: pts.map(d => d.estimate),
+        mode: 'lines',
+        name: sp,
+        line: { color: 'rgba(114,97,163,0.3)', width: 1.5 },
+        hovertemplate: `<i>${sp}</i><br>${label}: %{x:.2f}<br>estimate: %{y:.3f}<extra></extra>`
+      };
+    });
+
+  const layout = {
+    xaxis: { title: label, gridcolor: '#eee', zeroline: false },
+    yaxis: { title: 'Estimate', range: [0, 1.2], gridcolor: '#eee', zeroline: false },
+    showlegend: false,
+    hovermode: 'closest',
+    margin: { t: 20, b: 60, l: 60, r: 10 },
+    paper_bgcolor: '#fff',
+    plot_bgcolor: '#fff',
+  };
+
+  Plotly.react('chart', traces, layout, { responsive: true });
+}
+
+init();
+</script>
+
+</body>
+</html>
