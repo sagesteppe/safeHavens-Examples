@@ -115,7 +115,7 @@ for (lyr in lyrs) {
 
 # Layer manifest so the web app knows which files exist
 writeLines(
-    toJSON(lyrs, auto_unbox = FALSE), 
+    toJSON( sort(lyrs), auto_unbox = FALSE), 
     file.path(out_dir, 'layers.json')
     )
 ```
@@ -141,7 +141,7 @@ for (lyr in lyrs) {
 
 # Layer manifest so the web app knows which files exist
 writeLines(
-    toJSON(lyrs, auto_unbox = FALSE), 
+    toJSON( sort(lyrs), auto_unbox = FALSE), 
     file.path(out_dir, 'layers.json')
     )
 ```
