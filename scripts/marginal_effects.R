@@ -25,6 +25,7 @@ bio_groups = mutate(
 
 me = read.csv(
   file.path(
+    '..',
     'raw_data',
     'ManuscriptSummaries', 
     'marginal_effects.csv'
@@ -49,12 +50,17 @@ ggplot(data = asex, aes(x = x_value, y = estimate)) +
 
 # ── Export for web page ───────────────────────────────────────────────────────
 me_web <- read.csv(
-    file.path('raw_data', 'ManuscriptSummaries', 'marginal_effects.csv')
+    file.path('..', 'raw_data', 'ManuscriptSummaries', 'marginal_effects.csv')
   ) |>
   left_join(bio_groups |> mutate(label = as.character(label)),
             join_by(predictor == variable)) |>
   select(-group) |>
   arrange(species, predictor, x_value)
 
+me_web <- me_web |>
+  group_by(species, predictor) |>
+  slice(seq(1, n(), by = 2)) |>
+  ungroup()
+
 dir.create('docs/marginal_effects', showWarnings = FALSE, recursive = TRUE)
-write_json(me_web, 'docs/marginal_effects/data.json', digits = 8, na = 'null')
+write_json(me_web, '../docs/marginal_effects/data.json', digits = 8, na = 'null')
