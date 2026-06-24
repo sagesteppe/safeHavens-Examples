@@ -737,13 +737,16 @@
   // ── Boot (wait for both maps + layer manifests) ───────────────
   Promise.all([
     ...PANELS.map(p => new Promise(res => p.map.on('load', res))),
-    fetch('../data/layers.json').then(r => r.json()),
-    fetch('../data_future/layers.json').then(r => r.json())
+    fetch('../data/layers.json').then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }),
+    fetch('../data_future/layers.json').then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
   ]).then(([, , currentLayers, futureLayers]) => {
     const futureSet = new Set(futureLayers);
     const species = currentLayers.filter(s => futureSet.has(s));
     buildRefSidebar(REFERENCES);
     buildSidebar(species);
+  }).catch(err => {
+    console.error('Boot failed:', err);
+    document.getElementById('sidebar-footer').textContent = 'Error loading layers — check console';
   });
 </script>
 </body>
