@@ -59,46 +59,6 @@
       accent-color: #4a90d9;
     }
 
-    /* ── Zone legend ─────────────────────────── */
-    #zone-legend {
-      padding: 10px 12px;
-      border-top: 1px solid #eee;
-      border-bottom: 1px solid #eee;
-    }
-
-    #zone-legend h2 {
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: #666;
-      margin-bottom: 6px;
-    }
-
-    .legend-grid {
-      display: grid;
-      grid-template-columns: repeat(6, 1fr);
-      gap: 3px;
-    }
-
-    .legend-cell {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 2px;
-    }
-
-    .legend-swatch {
-      width: 18px;
-      height: 18px;
-      border-radius: 3px;
-      border: 1px solid rgba(0,0,0,0.15);
-    }
-
-    .legend-label {
-      font-size: 10px;
-      color: #555;
-    }
 
     .layer-label {
       font-style: italic;
@@ -191,7 +151,25 @@
 
     /* ── Map ─────────────────────────────────── */
     #map { flex: 1; }
-    #content { display: flex; flex: 1; min-height: 0; }
+    #content { display: flex; flex: 1; min-height: 0; position: relative; }
+
+    /* ── Map disclaimer ─────────────────────── */
+    #map-disclaimer {
+      position: absolute;
+      bottom: 35px;
+      right: 8px;
+      background: rgba(255,255,255,0.85);
+      padding: 5px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      color: #555;
+      max-width: 280px;
+      line-height: 1.4;
+      pointer-events: auto;
+      z-index: 2;
+    }
+    #map-disclaimer a { color: #4a90d9; text-decoration: none; }
+    #map-disclaimer a:hover { text-decoration: underline; }
     nav.site-nav {
       display: flex;
       align-items: center;
@@ -250,11 +228,6 @@
   <div id="sidebar-header">
     <h1>Seed Zones</h1>
   </div>
-  <div id="zone-legend">
-    <h2>Zone ID</h2>
-    <div class="legend-grid" id="legend-grid"></div>
-  </div>
-
   <div class="group-header">Reference</div>
   <div id="ref-list"></div>
 
@@ -276,32 +249,15 @@
 </div>
 
 <div id="map"></div>
+<div id="map-disclaimer">
+  Geometries simplified for web interactivity. For use in a local GIS (e.g. QGIS) please see
+  <a href="https://zenodo.org/records/20821893" target="_blank" rel="noopener">full-resolution files on Zenodo</a>.
+</div>
 </div><!-- #content -->
 
 <script>
-  // 12-color qualitative palette for zone IDs (ColorBrewer Set3)
-  const ZONE_COLORS = [
-    '#8dd3c7','#ffffb3','#bebada','#fb8072','#80b1d3','#fdb462',
-    '#b3de69','#fccde5','#d9d9d9','#bc80bd','#ccebc5','#ffed6f'
-  ];
-
-  // MapLibre match expression: colors polygon by integer ID 1–12
-  const ID_COLOR_EXPR = [
-    'match', ['get', 'ID'],
-    1,  ZONE_COLORS[0],
-    2,  ZONE_COLORS[1],
-    3,  ZONE_COLORS[2],
-    4,  ZONE_COLORS[3],
-    5,  ZONE_COLORS[4],
-    6,  ZONE_COLORS[5],
-    7,  ZONE_COLORS[6],
-    8,  ZONE_COLORS[7],
-    9,  ZONE_COLORS[8],
-    10, ZONE_COLORS[9],
-    11, ZONE_COLORS[10],
-    12, ZONE_COLORS[11],
-    '#cccccc'  // fallback for any ID outside 1–12
-  ];
+  // Golden-angle HSL: spreads any number of integer IDs into distinct hues
+  const ID_COLOR_EXPR = ['hsl', ['%', ['*', ['get', 'ID'], 137], 360], 55, 55];
 
   // ── Map init ──────────────────────────────────────────────────
   const map = new maplibregl.Map({
@@ -316,27 +272,6 @@
 
   // ── State ─────────────────────────────────────────────────────
   const loaded = new Set(); // species whose source+layers are on the map
-
-  // ── Zone legend ───────────────────────────────────────────────
-  function buildLegend() {
-    const grid = document.getElementById('legend-grid');
-    ZONE_COLORS.forEach((color, i) => {
-      const cell = document.createElement('div');
-      cell.className = 'legend-cell';
-
-      const sw = document.createElement('div');
-      sw.className = 'legend-swatch';
-      sw.style.background = color;
-
-      const lbl = document.createElement('span');
-      lbl.className = 'legend-label';
-      lbl.textContent = i + 1;
-
-      cell.appendChild(sw);
-      cell.appendChild(lbl);
-      grid.appendChild(cell);
-    });
-  }
 
   // ── Sidebar build ─────────────────────────────────────────────
   function buildSidebar(species) {
@@ -587,15 +522,11 @@
   });
 
   // ── Layer list (inlined to avoid file:// fetch restrictions) ──
-  const SPECIES = ["Asclepias_exaltata","Asclepias_purpurascens","Astragalus_crassicarpus","Blephilia_ciliata","Blephilia_hirsuta","Brachyelytrum_erectum","Bromus_kalmii","Bromus_nottowayanus","Carex_cristatella","Carex_davisii","Carex_festucacea","Carex_gracillima","Carex_hirtifolia","Carex_lupuliformis","Carex_meadii","Carex_pensylvanica","Carex_projecta","Carex_sartwellii","Carex_siccata","Carex_stricta","Carex_tuckermanii","Carex_vesicaria","Carex_woodii","Castilleja_coccinea","Castilleja_sessiliflora","Cinna_arundinacea","Cirsium_altissimum","Dichanthelium_leibergii","Elymus_hystrix","Gentiana_andrewsii","Heuchera_richardsonii","Hypoxis_hirsuta","Krigia_biflora","Lilium_philadelphicum","Lithospermum_canescens","Lithospermum_latifolium","Luzula_multiflora","Micranthes_pensylvanica","Nabalus_racemosus","Pediomelum_esculentum","Pulsatilla_patens","Ruellia_humilis","Sisyrinchium_campestre","Sporobolus_michauxianus","Stachys_hispida","Viola_pedatifida"]
-;
-
-
   // ── Boot ──────────────────────────────────────────────────────
-  map.on('load', () => {
-    buildLegend();
+  map.on('load', async () => {
+    const species = await fetch('./data/layers.json').then(r => r.json());
     buildRefSidebar(REFERENCES);
-    buildSidebar(SPECIES);
+    buildSidebar(species);
   });
 </script>
 </body>
