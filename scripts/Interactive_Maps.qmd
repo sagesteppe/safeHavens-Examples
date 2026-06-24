@@ -75,9 +75,9 @@ ints = sf::st_intersects(pstz, outer_boundary)
 pstz = pstz[which(lengths(ints)>0),]
 
 pstz = st_intersection(pstz, outer_boundary)
-pstz = select(pstz, c('seed_zone', "New_label", "geometry"))
+pstz = select(pstz, c("New_label", "geometry"))
 any(st_is_empty(pstz))
-st_write(pstz, file.path(out_dir, 'PSTZs.geojson'))
+st_write(pstz, file.path(out_dir, 'PSTZs.geojson'), layer_options = "COORDINATE_PRECISION=5")
 
 ## new eastern seed zones ## clip pstz to this extent. 
 ```
@@ -87,14 +87,14 @@ simplify geometries for more reactive display
 ```{r, eval = F}
 #| eval: false
 esz = sf::st_read(file.path(out_dir, 'EasternSeedZones.geojson'))
+esz = select(esz, SeedZone)
 esz = rmapshaper::ms_simplify(esz)
-st_write(esz, file.path(out_dir, 'EasternSeedZones.geojson'), append=F)
+st_write(esz, file.path(out_dir, 'EasternSeedZones.geojson'), append=F, layer_options = "COORDINATE_PRECISION=5")
 
 pstz = sf::st_read(file.path(out_dir, 'PSTZs.geojson'))
 pstz = rmapshaper::ms_simplify(pstz)
 pstz = sf::st_transform(pstz, 4326)
-
-st_write(pstz, file.path(out_dir, 'PSTZs.geojson'))
+st_write(pstz, file.path(out_dir, 'PSTZs.geojson'), layer_options = "COORDINATE_PRECISION=5")
 ```
 
 ```{r read-layers}
@@ -113,13 +113,13 @@ for (lyr in lyrs) {
   geom <- ms_simplify(geom, keep = 0.35, keep_shapes = TRUE)
   geom <- sf::st_make_valid(geom)
   out_path <- file.path(out_dir, paste0(lyr, '.geojson'))
-  st_write(geom, out_path, delete_dsn = TRUE, quiet = TRUE)
+  st_write(geom, out_path, delete_dsn = TRUE, quiet = TRUE, layer_options = "COORDINATE_PRECISION=5")
   message("exported: ", lyr)
 }
 
 # Layer manifest so the web app knows which files exist
 writeLines(
-    toJSON( sort(lyrs), auto_unbox = FALSE), 
+    toJSON( sort(lyrs), auto_unbox = FALSE),
     file.path(out_dir, 'layers.json')
     )
 ```
@@ -139,7 +139,7 @@ for (lyr in lyrs) {
   geom <- ms_simplify(geom, keep = 0.35, keep_shapes = TRUE)
   geom <- sf::st_make_valid(geom)
   out_path <- file.path(out_dir, paste0(lyr, '.geojson'))
-  st_write(geom, out_path, delete_dsn = TRUE, quiet = TRUE)
+  st_write(geom, out_path, delete_dsn = TRUE, quiet = TRUE, layer_options = "COORDINATE_PRECISION=5")
   message("exported: ", lyr)
 }
 
