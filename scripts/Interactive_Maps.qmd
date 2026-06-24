@@ -16,6 +16,8 @@ dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
 ```
 
 ```{r copy down the new eastern seed zones, eval = F}
+#| eval: false
+
 url <- "https://services1.arcgis.com/gGHDlz6USftL5Pau/arcgis/rest/services/ESZ_v2_2/FeatureServer/0"
 lyr <- arc_open(url)
 esz <- arc_select(lyr)   # handles pagination automatically
@@ -39,6 +41,7 @@ rm(url, lyr, esz)
 
 prep context layers
 ```{r prep context layers, eval = F}
+#| eval: false
 cook = tigris::counties(state = 'Illinois') |>
   filter(NAME == 'Cook') |>
   select(geometry) |>
@@ -82,6 +85,7 @@ st_write(pstz, file.path(out_dir, 'PSTZs.geojson'))
 
 simplify geometries for more reactive display
 ```{r, eval = F}
+#| eval: false
 esz = sf::st_read(file.path(out_dir, 'EasternSeedZones.geojson'))
 esz = rmapshaper::ms_simplify(esz)
 st_write(esz, file.path(out_dir, 'EasternSeedZones.geojson'), append=F)
@@ -106,7 +110,7 @@ dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
 for (lyr in lyrs) {
   geom <- st_read(p, layer = lyr, quiet = TRUE)
   geom <- st_transform(geom, 4326)
-  geom <- ms_simplify(geom, keep = 0.1, keep_shapes = TRUE)
+  geom <- ms_simplify(geom, keep = 0.5, keep_shapes = TRUE)
   geom <- sf::st_make_valid(geom)
   out_path <- file.path(out_dir, paste0(lyr, '.geojson'))
   st_write(geom, out_path, delete_dsn = TRUE, quiet = TRUE)
@@ -132,7 +136,7 @@ out_dir <- file.path('..', 'docs', 'data_future')
 for (lyr in lyrs) {
   geom <- st_read(p, layer = lyr, quiet = TRUE)
   geom <- st_transform(geom, 4326)
-  geom <- ms_simplify(geom, keep = 0.1, keep_shapes = TRUE)
+  geom <- ms_simplify(geom, keep = 0.5, keep_shapes = TRUE)
   geom <- sf::st_make_valid(geom)
   out_path <- file.path(out_dir, paste0(lyr, '.geojson'))
   st_write(geom, out_path, delete_dsn = TRUE, quiet = TRUE)
@@ -144,4 +148,9 @@ writeLines(
     toJSON( sort(lyrs), auto_unbox = FALSE), 
     file.path(out_dir, 'layers.json')
     )
+```
+
+
+```{r}
+
 ```
