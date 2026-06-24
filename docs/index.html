@@ -256,8 +256,13 @@
 </div><!-- #content -->
 
 <script>
-  // Golden-angle HSL: spreads any number of integer IDs into distinct hues
-  const ID_COLOR_EXPR = ['hsl', ['%', ['*', ['get', 'ID'], 137], 360], 55, 55];
+  // Golden-angle palette: (ID × 137) mod 360 spreads 55 zone IDs into distinct hues
+  const ID_COLOR_EXPR = (() => {
+    const args = ['match', ['get', 'ID']];
+    for (let i = 1; i <= 55; i++) args.push(i, `hsl(${(i * 137) % 360}, 55%, 55%)`);
+    args.push('#cccccc');
+    return args;
+  })();
 
   // ── Map init ──────────────────────────────────────────────────
   const map = new maplibregl.Map({
